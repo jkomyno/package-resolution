@@ -1,6 +1,14 @@
 {
   "name": "@jkomyno/package-resolution",
   "private": true,
+  "author": {
+    "name": "Alberto Schiabel",
+    "email": "alberto.schiabel@gmail.com",
+    "url": "https://github.com/jkomyno"
+  },
+  "repository": {
+    "url": "https://github.com/jkomyno/bundler-resolution"
+  },
   "scripts": {
     "test": "bun run test",
     "lint": "biome check .",
