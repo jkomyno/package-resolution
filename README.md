@@ -177,3 +177,25 @@ bun test
 The way bundlers resolve package exports can be complex and depends on their configuration. For library authors, it's crucial to provide a comprehensive `exports` map to support various environments. For application developers, it's important to understand how their chosen bundler is configured, as it can affect which version of a library's code is included in the final bundle.
 
 This investigation highlights the importance of testing against multiple bundlers to ensure that a package behaves as expected across the JavaScript ecosystem.
+
+## FAQ
+
+- Why did you create this project?
+
+  I was going crazy trying to debug an issue involving `@prisma/client`, ESBuild, and `format: 'cjs'`. That lead me to investigate how different bundlers resolve package exports, especially when using the `exports` field in `package.json`.
+
+## 👤 Author
+
+Hi, I'm **Alberto Schiabel**, you can follow me on:
+
+- Github: [@jkomyno](https://github.com/jkomyno)
+- Twitter: [@jkomyno](https://twitter.com/jkomyno)
+
+## 🦄 Show your support
+
+Give a ⭐️ if this project helped or inspired you!
+
+## 📝 License
+
+Built with ❤️ by [Alberto Schiabel](https://github.com/jkomyno).<br />
+This project is [MIT](https://github.com/jkomyno/package-resolution/blob/main/LICENSE) licensed.
