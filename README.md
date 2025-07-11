@@ -123,7 +123,14 @@ Vite's behavior is consistent and predictable.
 | ESM | `exports['.'].import` | `exports['.'].import` | `exports['.'].import` |
 
 Vite does not follow the [WinterCG Runtime Keys specification](https://runtime-keys.proposal.wintercg.org/), so it never picks the `node` conditional export.
-On the other hand, Vite prefers `exports['.'].workerd.import` over `exports['.'].import` when `@cloudflare/vite-plugin` is used.
+
+#### Vite + `@cloudflare/vite-plugin`
+
+When using the `@cloudflare/vite-plugin`, Vite's behavior changes to prefer `exports['.'].workerd.import` over `exports['.'].import`. Only the ESM format is supported by the Cloudflare Workerd runtime.
+
+| Format | `index` resolution | `client` resolution | `runtime` resolution |
+| --- | --- | --- | --- |
+| ESM | `exports['.'].import` | `exports['.'].workerd.import` | `exports['.'].workerd.import` |
 
 #### Webpack
 
