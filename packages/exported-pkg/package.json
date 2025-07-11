@@ -1,0 +1,75 @@
+{
+  "name": "@jkomyno/exported-pkg",
+  "private": true,
+  "version": "0.0.1",
+  "license": "MIT",
+  "sideEffects": false,
+  "module": "module.mjs",
+  "main": "./src/main.js",
+  "types": "./src/types.d.ts",
+  "browser": "./src/index-browser.js",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./src/index.d.ts",
+      "require": "./src/index.cjs",
+      "import": "./src/index.mjs",
+      "default": "./src/index.js"
+    },
+    "./client": {
+      "types": "./src/client/client.d.ts",
+      "workerd": {
+        "// require": ".// The main module must be an ES module.",
+        "// types": ".// You can directly import the TypeScript file",
+        "import": "./src/client/client-workerd.ts"
+      },
+      "bun": {
+        "// types": ".// You can directly import the TypeScript file",
+        "import": "./src/client/client-bun.ts"
+      },
+      "deno": {
+        "// types": ".// You can directly import the TypeScript file",
+        "import": "./src/client/client-deno.ts",
+        "default": "./src/client/client-deno.js"
+      },
+      "require": "./src/client/client.cjs",
+      "import": "./src/client/client.mjs",
+      "default": "./src/client/client.js"
+    },
+    "./runtime": {
+      "types": "./src/runtime/runtime.d.ts",
+      "worker": {
+        "// require": ".// The main module must be an ES module.",
+        "// types": ".// You can directly import the TypeScript file",
+        "import": "./src/runtime/runtime-worker.ts"
+      },
+      "workerd": {
+        "// require": ".// The main module must be an ES module.",
+        "// types": ".// You can directly import the TypeScript file",
+        "import": "./src/runtime/runtime-workerd.ts"
+      },
+      "bun": {
+        "// types": ".// You can directly import the TypeScript file",
+        "import": "./src/runtime/runtime-bun.ts"
+      },
+      "deno": {
+        "// types": ".// You can directly import the TypeScript file",
+        "import": "./src/runtime/runtime-deno.ts",
+        "default": "./src/runtime/runtime-deno.js"
+      },
+      "node": {
+        "types": "./src/runtime/runtime-node.d.ts",
+        "require": "./src/runtime/runtime-node.cjs",
+        "import": "./src/runtime/runtime-node.mjs",
+        "default": "./src/runtime/runtime-node.js"
+      },
+      "require": "./src/runtime/runtime.cjs",
+      "import": "./src/runtime/runtime.mjs",
+      "default": "./src/runtime/runtime.js"
+    },
+    "./*": "./*"
+  },
+  "engines": {
+    "node": ">=18.18"
+  }
+}
