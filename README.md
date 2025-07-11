@@ -6,17 +6,84 @@ This project showcases how different bundlers and runtimes resolve imports from 
 
 The test suite in [`packages/import-test/bundler.test.ts`](packages/import-test/bundler.test.ts) runs a series of tests against different bundlers (ESBuild, Vite, Webpack, RsBuild) and runtimes (Node.js, Bun, Deno, Cloudflare Workerd). It checks which file is resolved for different subpaths of an example package ([`@jkomyno/exported-pkg`](@jkomyno/exported-pkg)).
 
+The exports map in `@jkomyno/exported-pkg` is structured as follows:
+
+- `package.json#/exports/.`: Simplest entry, with no platform-specific condition.
+  ```json
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "require": "./src/index.cjs",
+      "import": "./src/index.mjs",
+      "default": "./src/index.js"
+    }
+  }
+  ```
+- `package.json#/exports/client`: Uses conditional runtime names according to the [WinterCG Runtime Keys specification](https://runtime-keys.proposal.wintercg.org/), but it doesn't include `node`.
+  ```json
+  "exports": {
+    ".": {
+      "./client": {
+        "types": "./src/client/client.d.ts",
+        "workerd": {
+          "import": "./src/client/client-workerd.ts"
+        },
+        "bun": {
+          "import": "./src/client/client-bun.ts"
+        },
+        "deno": {
+          "import": "./src/client/client-deno.ts",
+          "default": "./src/client/client-deno.js"
+        },
+        "require": "./src/client/client.cjs",
+        "import": "./src/client/client.mjs",
+        "default": "./src/client/client.js"
+      }
+    }
+  }
+  ```
+- `package.json#/exports/runtime`: Uses conditional runtime names, including `node`.
+  ```json
+  "exports": {
+    "./runtime": {
+      "types": "./src/runtime/runtime.d.ts",
+      "worker": {
+        "import": "./src/runtime/runtime-worker.ts"
+      },
+      "workerd": {
+        "import": "./src/runtime/runtime-workerd.ts"
+      },
+      "bun": {
+        "import": "./src/runtime/runtime-bun.ts"
+      },
+      "deno": {
+        "import": "./src/runtime/runtime-deno.ts",
+        "default": "./src/runtime/runtime-deno.js"
+      },
+      "node": {
+        "types": "./src/runtime/runtime-node.d.ts",
+        "require": "./src/runtime/runtime-node.cjs",
+        "import": "./src/runtime/runtime-node.mjs",
+        "default": "./src/runtime/runtime-node.js"
+      },
+      "require": "./src/runtime/runtime.cjs",
+      "import": "./src/runtime/runtime.mjs",
+      "default": "./src/runtime/runtime.js"
+    }
+  }
+  ```
+
 ## Key Findings
 
-The main takeaway is that bundler behavior is not consistent, and it's influenced by the `platform` or `target` settings, as well as the output format (CJS vs. ESM).
+The main takeaway is that package resolution behavior is not consistent among bundlers. It's also influenced by bundler-specific settings, such as `platform` on ESBuild, or by plugins in Vite.
 
 ### Runtimes
 
 | Runtime | Behavior |
 | --- | --- |
-| **Bun** | Prefers `bun.import` when resolving TypeScript files. |
-| **Deno** | Prefers `deno.import` when resolving TypeScript files. |
-| **Cloudflare Workerd** | Prefers `workerd.import` when resolving TypeScript files. |
+| **Bun** | Prefers `bun.import`, falling back to `import`. It can resolve TypeScript files without requiring any transpilation. |
+| **Deno** | Prefers `deno.import`, falling back to `import`. It can resolve TypeScript files without requiring any transpilation. |
+| **Cloudflare Workerd** | Prefers `workerd.import`. when resolving TypeScript files. |
 
 ### Bundlers
 
@@ -24,17 +91,27 @@ Here's a summary of how different bundlers resolve package exports. The tests ar
 
 #### ESBuild
 
-ESBuild's resolution is heavily influenced by the `platform` setting. Its behavior can be further customized by specifying custom `conditions` in the build options. For example, setting `conditions: ['edge-light']` would make ESBuild prefer the `edge-light` conditional export, if present in the imported package's `package.json`.
+ESBuild's resolution is heavily influenced by the `platform` setting. Its behavior can be further customized by specifying custom `conditions` in the build options.
+
+With default `conditions`:
+
+| Platform | Format | `index` resolution | `client` resolution | `runtime` resolution |
+| --- | --- | --- | --- | --- |
+| `node` | CJS | `exports['.'].import` | `exports['.'].import` | `exports['.'].node.import` |
+| `node` | ESM | `exports['.'].import` | `exports['.'].import` | `exports['.'].node.import` |
+| `neutral` | CJS | `exports['.'].import` | `exports['.'].import` | `exports['.'].import` |
+| `neutral` | ESM | `exports['.'].import` | `exports['.'].import` | `exports['.'].import` |
+
+With custom `conditions`:
+  - When `format: 'cjs'`, set `conditions: ['require']`
 
 | Platform | Format | `index` resolution | `client` resolution | `runtime` resolution |
 | --- | --- | --- | --- | --- |
 | `node` | CJS | `exports['.'].require` | `exports['.'].require` | `exports['.'].node.require` |
-| `node` | ESM | `exports['.'].import` | `exports['.'].import` | `exports['.'].node.import` |
 | `neutral` | CJS | `exports['.'].require` | `exports['.'].require` | `exports['.'].require` |
-| `neutral` | ESM | `exports['.'].import` | `exports['.'].import` | `exports['.'].import` |
 
-- **With `platform: 'node'`**: ESBuild correctly uses the `node` conditional export for the `runtime` subpath.
-- **With `platform: 'neutral'`**: ESBuild falls back to the standard `require` and `import` fields, ignoring the `node` conditional export.
+- **With `platform: 'node'`**: ESBuild correctly prefers the `node` conditional export for `package.json#/exports/runtime`, but it defaults to `import` subpaths even when `format: 'cjs'`. While this is documented behavior, it can lead to errors when library authors expect `require` to be used for CJS outputs. The workaround is to set `conditions: ['require']` in the build options.
+- **With `platform: 'neutral'`**: ESBuild falls back to the standard `require` and `import` fields, ignoring the `node` conditional export as intended.
 
 #### Vite
 
@@ -45,7 +122,8 @@ Vite's behavior is consistent and predictable.
 | CJS | `exports['.'].require` | `exports['.'].require` | `exports['.'].require` |
 | ESM | `exports['.'].import` | `exports['.'].import` | `exports['.'].import` |
 
-Vite does not seem to automatically pick up the `node` conditional export, instead using the generic `require` or `import`.
+Vite does not follow the [WinterCG Runtime Keys specification](https://runtime-keys.proposal.wintercg.org/), so it never picks the `node` conditional export.
+On the other hand, Vite prefers `exports['.'].workerd.import` over `exports['.'].import` when `@cloudflare/vite-plugin` is used.
 
 #### Webpack
 
@@ -67,7 +145,7 @@ RsBuild's behavior is similar to ESBuild with `platform: 'node'`.
 | --- | --- | --- | --- |
 | ESM | `exports['.'].import` | `exports['.'].import` | `exports['.'].node.import` |
 
-RsBuild correctly uses the `node` conditional export for the `runtime` subpath when bundling for ESM.
+RsBuild correctly uses the `node` conditional export for the `package.json#/exports/runtime` when bundling for ESM.
 
 ## How to run
 

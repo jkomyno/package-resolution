@@ -103,7 +103,7 @@ describe.each(jsRuntimes)('with %s, %s', (jsRuntime, pm) => {
 				const platform = 'node' as const
 
 				// Reproduction of: https://github.com/prisma/prisma/issues/27324
-				it('by default, CJS loads all from import', async () => {
+				it('by default, loads runtime from node.import, rest from import', async () => {
 					const { default: esbuild } = await import('esbuild')
 
 					await esbuild.build({
@@ -128,41 +128,13 @@ describe.each(jsRuntimes)('with %s, %s', (jsRuntime, pm) => {
 						},
 					})
 				})
-
-				// Workaround for: https://github.com/prisma/prisma/issues/27324
-				it('with custom conditions, CJS loads runtime from node.require, rest from require', async () => {
-					const { default: esbuild } = await import('esbuild')
-
-					await esbuild.build({
-						...cjsOpts,
-						platform,
-						outdir: `${cwd}/dist/esbuild-${platform}/cjs`,
-						conditions: ['require'],
-					})
-
-					const esbuildNodeCjsConditions = await $`${jsRuntime} ${cwd}/dist/esbuild-${platform}/cjs/index.cjs`.json()
-					expect(esbuildNodeCjsConditions).toEqual({
-						client: {
-							filename: 'client.cjs',
-							resolvedFrom: "exports['.'].require",
-						},
-						index: {
-							filename: 'index.cjs',
-							resolvedFrom: "exports['.'].require",
-						},
-						runtime: {
-							filename: 'runtime-node.cjs',
-							resolvedFrom: "exports['.'].node.require",
-						},
-					})
-				})
 			})
 
 			describe('with platform="neutral"', () => {
 				const platform = 'neutral' as const
 
 				// Expected. Recall that the cjs format is intended to be run on platform=node.
-				it('by default, CJS loads all from import', async () => {
+				it('by default, loads all from import', async () => {
 					const { default: esbuild } = await import('esbuild')
 
 					await esbuild.build({
@@ -187,18 +159,72 @@ describe.each(jsRuntimes)('with %s, %s', (jsRuntime, pm) => {
 						},
 					})
 				})
+			})
+		})
 
-				it('with custom conditions, CJS loads all from require', async () => {
+		describe("with CJS and custom conditions: ['require']", () => {
+			const format = 'cjs' as const
+
+			const cjsOpts = {
+				...baseOpts,
+				format,
+				conditions: ['require'],
+				outExtension: {
+					'.js': '.cjs',
+				},
+			} satisfies EsbuildOptions
+
+			describe('with platform="node"', () => {
+				// See: https://esbuild.github.io/api/#platform
+				const platform = 'node' as const
+
+				// Workaround for: https://github.com/prisma/prisma/issues/27324
+				it('loads runtime from node.require, rest from require', async () => {
 					const { default: esbuild } = await import('esbuild')
 
 					await esbuild.build({
 						...cjsOpts,
-						outdir: `${cwd}/dist/esbuild-${platform}/cjs`,
 						platform,
+						outdir: `${cwd}/dist/esbuild-${platform}-custom/cjs`,
 						conditions: ['require'],
 					})
 
-					const esbuildNodeCjsConditions = await $`${jsRuntime} ${cwd}/dist/esbuild-${platform}/cjs/index.cjs`.json()
+					const esbuildNodeCjsConditions =
+						await $`${jsRuntime} ${cwd}/dist/esbuild-${platform}-custom/cjs/index.cjs`.json()
+					expect(esbuildNodeCjsConditions).toEqual({
+						client: {
+							filename: 'client.cjs',
+							resolvedFrom: "exports['.'].require",
+						},
+						index: {
+							filename: 'index.cjs',
+							resolvedFrom: "exports['.'].require",
+						},
+						runtime: {
+							filename: 'runtime-node.cjs',
+							resolvedFrom: "exports['.'].node.require",
+						},
+					})
+				})
+			})
+
+			describe('with platform="neutral"', () => {
+				// See: https://esbuild.github.io/api/#platform
+				const platform = 'neutral' as const
+
+				// Workaround for: https://github.com/prisma/prisma/issues/27324
+				it('loads all from require', async () => {
+					const { default: esbuild } = await import('esbuild')
+
+					await esbuild.build({
+						...cjsOpts,
+						platform,
+						outdir: `${cwd}/dist/esbuild-${platform}-custom/cjs`,
+						conditions: ['require'],
+					})
+
+					const esbuildNodeCjsConditions =
+						await $`${jsRuntime} ${cwd}/dist/esbuild-${platform}-custom/cjs/index.cjs`.json()
 					expect(esbuildNodeCjsConditions).toEqual({
 						client: {
 							filename: 'client.cjs',
@@ -262,33 +288,6 @@ describe.each(jsRuntimes)('with %s, %s', (jsRuntime, pm) => {
 						},
 					})
 				})
-
-				it('with custom conditions, ESM loads runtime from node.import, rest from import', async () => {
-					const { default: esbuild } = await import('esbuild')
-
-					await esbuild.build({
-						...esmOpts,
-						platform,
-						outdir: `${cwd}/dist/esbuild-${platform}/esm`,
-						conditions: ['import'],
-					})
-
-					const esbuildNodeEsmConditions = await $`${jsRuntime} ${cwd}/dist/esbuild-${platform}/esm/index.mjs`.json()
-					expect(esbuildNodeEsmConditions).toEqual({
-						client: {
-							filename: 'client.mjs',
-							resolvedFrom: "exports['.'].import",
-						},
-						index: {
-							filename: 'index.mjs',
-							resolvedFrom: "exports['.'].import",
-						},
-						runtime: {
-							filename: 'runtime-node.mjs',
-							resolvedFrom: "exports['.'].node.import",
-						},
-					})
-				})
 			})
 
 			describe('with platform="neutral"', () => {
@@ -305,33 +304,6 @@ describe.each(jsRuntimes)('with %s, %s', (jsRuntime, pm) => {
 
 					const esbuildNodeEsm = await $`${jsRuntime} ${cwd}/dist/esbuild-${platform}/esm/index.mjs`.json()
 					expect(esbuildNodeEsm).toEqual({
-						client: {
-							filename: 'client.mjs',
-							resolvedFrom: "exports['.'].import",
-						},
-						index: {
-							filename: 'index.mjs',
-							resolvedFrom: "exports['.'].import",
-						},
-						runtime: {
-							filename: 'runtime.mjs',
-							resolvedFrom: "exports['.'].import",
-						},
-					})
-				})
-
-				it('with custom conditions, ESM loads all from import', async () => {
-					const { default: esbuild } = await import('esbuild')
-
-					await esbuild.build({
-						...esmOpts,
-						platform,
-						outdir: `${cwd}/dist/esbuild-${platform}/esm`,
-						conditions: ['import'],
-					})
-
-					const esbuildNodeEsmConditions = await $`${jsRuntime} ${cwd}/dist/esbuild-${platform}/esm/index.mjs`.json()
-					expect(esbuildNodeEsmConditions).toEqual({
 						client: {
 							filename: 'client.mjs',
 							resolvedFrom: "exports['.'].import",
