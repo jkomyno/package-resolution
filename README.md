@@ -1,6 +1,6 @@
 # Package Resolution
 
-[![CI](https://github.com/jkomyno/bundler-resolution/actions/workflows/ci.yml/badge.svg)](https://github.com/jkomyno/bundler-resolution/actions/workflows/ci.yml)
+[![CI](https://github.com/jkomyno/package-resolution/actions/workflows/ci.yml/badge.svg)](https://github.com/jkomyno/package-resolution/actions/workflows/ci.yml)
 
 This project showcases how different bundlers and runtimes resolve imports from a package that uses `exports` maps in its `package.json`. The goal is to understand the inconsistencies and document them.
 
