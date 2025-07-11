@@ -1,10 +1,10 @@
-# Bundler Resolution
+# Package Resolution
 
 [![CI](https://github.com/jkomyno/bundler-resolution/actions/workflows/ci.yml/badge.svg)](https://github.com/jkomyno/bundler-resolution/actions/workflows/ci.yml)
 
 This project showcases how different bundlers and runtimes resolve imports from a package that uses `exports` maps in its `package.json`. The goal is to understand the inconsistencies and document them.
 
-The test suite in `bundler.test.ts` runs a series of tests against different bundlers (ESBuild, Vite, Webpack, RsBuild) and runtimes (Node.js, Bun, Deno, Cloudflare Workerd). It checks which file is resolved for different subpaths of an example package (`@jkomyno/exported-pkg`).
+The test suite in [`packages/import-test/bundler.test.ts`](packages/import-test/bundler.test.ts) runs a series of tests against different bundlers (ESBuild, Vite, Webpack, RsBuild) and runtimes (Node.js, Bun, Deno, Cloudflare Workerd). It checks which file is resolved for different subpaths of an example package ([`@jkomyno/exported-pkg`](@jkomyno/exported-pkg)).
 
 ## Key Findings
 

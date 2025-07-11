@@ -1,5 +1,5 @@
 {
-  "name": "@jkomyno/bundler-resolution",
+  "name": "@jkomyno/package-resolution",
   "private": true,
   "scripts": {
     "test": "bun run test",
