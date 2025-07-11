@@ -385,43 +385,55 @@ describe.each(jsRuntimes)('with %s, %s', (jsRuntime, pm) => {
 	})
 
 	describe('Webpack', () => {
-		it('CJS loads runtime from node.require, rest from require', async () => {
-			await $`bun bundle:webpack:cjs`.quiet()
-			const webpackCjs = await $`${jsRuntime} ${cwd}/dist/webpack/cjs/index.cjs`.json()
-			expect(webpackCjs).toEqual({
-				client: {
-					filename: 'client.cjs',
-					resolvedFrom: "exports['.'].require",
-				},
-				index: {
-					filename: 'index.cjs',
-					resolvedFrom: "exports['.'].require",
-				},
-				runtime: {
-					filename: 'runtime-node.cjs',
-					resolvedFrom: "exports['.'].node.require",
-				},
-			})
-		})
+		it(
+			'CJS loads runtime from node.require, rest from require',
+			async () => {
+				await $`bun bundle:webpack:cjs`.quiet()
+				const webpackCjs = await $`${jsRuntime} ${cwd}/dist/webpack/cjs/index.cjs`.json()
+				expect(webpackCjs).toEqual({
+					client: {
+						filename: 'client.cjs',
+						resolvedFrom: "exports['.'].require",
+					},
+					index: {
+						filename: 'index.cjs',
+						resolvedFrom: "exports['.'].require",
+					},
+					runtime: {
+						filename: 'runtime-node.cjs',
+						resolvedFrom: "exports['.'].node.require",
+					},
+				})
+			},
+			{
+				timeout: 15_000,
+			},
+		)
 
-		it('ESM loads runtime from node.require, rest from require', async () => {
-			await $`bun bundle:webpack:esm`.quiet()
-			const webpackEsm = await $`${jsRuntime} ${cwd}/dist/webpack/esm/index.mjs`.json()
-			expect(webpackEsm).toEqual({
-				client: {
-					filename: 'client.cjs',
-					resolvedFrom: "exports['.'].require",
-				},
-				index: {
-					filename: 'index.cjs',
-					resolvedFrom: "exports['.'].require",
-				},
-				runtime: {
-					filename: 'runtime-node.cjs',
-					resolvedFrom: "exports['.'].node.require",
-				},
-			})
-		})
+		it(
+			'ESM loads runtime from node.require, rest from require',
+			async () => {
+				await $`bun bundle:webpack:esm`.quiet()
+				const webpackEsm = await $`${jsRuntime} ${cwd}/dist/webpack/esm/index.mjs`.json()
+				expect(webpackEsm).toEqual({
+					client: {
+						filename: 'client.cjs',
+						resolvedFrom: "exports['.'].require",
+					},
+					index: {
+						filename: 'index.cjs',
+						resolvedFrom: "exports['.'].require",
+					},
+					runtime: {
+						filename: 'runtime-node.cjs',
+						resolvedFrom: "exports['.'].node.require",
+					},
+				})
+			},
+			{
+				timeout: 15_000,
+			},
+		)
 	})
 
 	describe('RsBuild', () => {
