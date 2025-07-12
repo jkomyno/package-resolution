@@ -113,6 +113,30 @@ With custom `conditions`:
 - **With `platform: 'node'`**: ESBuild correctly prefers the `node` conditional export for `package.json#/exports/runtime`, but it defaults to `import` subpaths even when `format: 'cjs'`. While this is documented behavior, it can lead to errors when library authors expect `require` to be used for CJS outputs. The workaround is to set `conditions: ['require']` in the build options.
 - **With `platform: 'neutral'`**: ESBuild falls back to the standard `require` and `import` fields, ignoring the `node` conditional export as intended.
 
+#### Rolldown
+
+Rolldown's resolution behavior is very similar to ESBuild, as it's designed to be compatible with ESBuild's API and behavior.
+
+With default `conditionNames`:
+
+| Platform | Format | `index` resolution | `client` resolution | `runtime` resolution |
+| --- | --- | --- | --- | --- |
+| `node` | CJS | `exports['.'].import` | `exports['.'].import` | `exports['.'].node.import` |
+| `node` | ESM | `exports['.'].import` | `exports['.'].import` | `exports['.'].node.import` |
+| `neutral` | CJS | `exports['.'].import` | `exports['.'].import` | `exports['.'].import` |
+| `neutral` | ESM | `exports['.'].import` | `exports['.'].import` | `exports['.'].import` |
+
+With custom `conditionNames`:
+  - When `format: 'cjs'`, set `conditionNames: ['require']`
+
+| Platform | Format | `index` resolution | `client` resolution | `runtime` resolution |
+| --- | --- | --- | --- | --- |
+| `node` | CJS | `exports['.'].require` | `exports['.'].require` | `exports['.'].node.require` |
+| `neutral` | CJS | `exports['.'].require` | `exports['.'].require` | `exports['.'].require` |
+
+- **With `platform: 'node'`**: Rolldown correctly prefers the `node` conditional export for `package.json#/exports/runtime`, but like ESBuild, it defaults to `import` subpaths even when `format: 'cjs'`. The workaround is to set `conditionNames: ['require']` in the resolve options.
+- **With `platform: 'neutral'`**: Rolldown falls back to the standard `require` and `import` fields, ignoring the `node` conditional export as intended.
+
 #### Vite
 
 Vite's behavior is consistent and predictable.

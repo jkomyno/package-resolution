@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import path from 'node:path'
 import { $ as _$ } from 'bun'
 import type { BuildOptions as EsbuildOptions } from 'esbuild'
+import type { BuildOptions as RooldownOptions } from 'rolldown'
 
 // TODO: why doesn't Bun pick up the cwd into `packages/import-test` automatically when
 // running tests within a monorepo?
@@ -63,7 +64,263 @@ describe('Deno', () => {
 const jsRuntimes = [['bun', 'bun']] as [runtime: string, pm: string][]
 
 describe.each(jsRuntimes)('with %s, %s', (jsRuntime, pm) => {
-	describe('ESBuild', () => {
+	describe('Rolldown', () => {
+		const baseOpts = {
+			input: [path.join(cwd, 'src', 'index.ts')],
+			external: [
+				// Avoid errors like `Could not resolve "node:fs/promises"`
+				'node:*',
+			],
+		} satisfies RooldownOptions
+
+		describe('with CJS', () => {
+			// See: https://rolldown.rs/reference/config-options#format
+			const format = 'cjs' as const
+
+			const cjsOpts = {
+				...baseOpts,
+				output: {
+					format,
+					entryFileNames: '[name].cjs',
+				},
+			} satisfies RooldownOptions
+
+			describe('with platform="node"', () => {
+				const platform = 'node' as const
+
+				// Reproduction of: https://github.com/prisma/prisma/issues/27324
+				it('by default, loads runtime from node.import, rest from import', async () => {
+					const rolldown = await import('rolldown')
+
+					await rolldown.build({
+						...cjsOpts,
+						platform,
+						output: {
+							...cjsOpts.output,
+							dir: `${cwd}/dist/rolldown-${platform}/cjs`,
+						},
+					})
+
+					const rolldownNodeCjs = await $`${jsRuntime} ${cwd}/dist/rolldown-${platform}/cjs/index.cjs`.json()
+					expect(rolldownNodeCjs).toEqual({
+						client: {
+							filename: 'client.mjs',
+							resolvedFrom: "exports['.'].import",
+						},
+						index: {
+							filename: 'index.mjs',
+							resolvedFrom: "exports['.'].import",
+						},
+						runtime: {
+							filename: 'runtime-node.mjs',
+							resolvedFrom: "exports['.'].node.import",
+						},
+					})
+				})
+			})
+
+			describe('with platform="neutral"', () => {
+				const platform = 'neutral' as const
+
+				// Expected. Recall that the cjs format is intended to be run on platform=node.
+				it('by default, loads all from import', async () => {
+					const rolldown = await import('rolldown')
+
+					await rolldown.build({
+						...cjsOpts,
+						platform,
+						output: {
+							...cjsOpts.output,
+							dir: `${cwd}/dist/rolldown-${platform}/cjs`,
+						},
+					})
+
+					const rolldownNodeCjs = await $`${jsRuntime} ${cwd}/dist/rolldown-${platform}/cjs/index.cjs`.json()
+					expect(rolldownNodeCjs).toEqual({
+						client: {
+							filename: 'client.mjs',
+							resolvedFrom: "exports['.'].import",
+						},
+						index: {
+							filename: 'index.mjs',
+							resolvedFrom: "exports['.'].import",
+						},
+						runtime: {
+							filename: 'runtime.mjs',
+							resolvedFrom: "exports['.'].import",
+						},
+					})
+				})
+			})
+		})
+
+		describe("with CJS and custom conditionNames: ['require']", () => {
+			// See: https://rolldown.rs/reference/config-options#format
+			const format = 'cjs' as const
+
+			const cjsOpts = {
+				...baseOpts,
+				resolve: {
+					conditionNames: ['require'],
+				},
+				output: {
+					format,
+					entryFileNames: '[name].cjs',
+				},
+			} satisfies RooldownOptions
+
+			describe('with platform="node"', () => {
+				const platform = 'node' as const
+
+				it('loads runtime from node.require, rest from require', async () => {
+					const rolldown = await import('rolldown')
+
+					await rolldown.build({
+						...cjsOpts,
+						platform,
+						output: {
+							...cjsOpts.output,
+							dir: `${cwd}/dist/rolldown-${platform}-custom/cjs`,
+						},
+					})
+
+					const rolldownNodeCjsConditions =
+						await $`${jsRuntime} ${cwd}/dist/rolldown-${platform}-custom/cjs/index.cjs`.json()
+					expect(rolldownNodeCjsConditions).toEqual({
+						client: {
+							filename: 'client.cjs',
+							resolvedFrom: "exports['.'].require",
+						},
+						index: {
+							filename: 'index.cjs',
+							resolvedFrom: "exports['.'].require",
+						},
+						runtime: {
+							filename: 'runtime-node.cjs',
+							resolvedFrom: "exports['.'].node.require",
+						},
+					})
+				})
+			})
+
+			describe('with platform="neutral"', () => {
+				// See: https://esbuild.github.io/api/#platform
+				const platform = 'neutral' as const
+
+				// Workaround for: https://github.com/prisma/prisma/issues/27324
+				it('loads all from require', async () => {
+					const rolldown = await import('rolldown')
+
+					await rolldown.build({
+						...cjsOpts,
+						platform,
+						output: {
+							...cjsOpts.output,
+							dir: `${cwd}/dist/rolldown-${platform}-custom/cjs`,
+						},
+					})
+
+					const rolldownNeutralCjsConditions =
+						await $`${jsRuntime} ${cwd}/dist/rolldown-${platform}-custom/cjs/index.cjs`.json()
+					expect(rolldownNeutralCjsConditions).toEqual({
+						client: {
+							filename: 'client.cjs',
+							resolvedFrom: "exports['.'].require",
+						},
+						index: {
+							filename: 'index.cjs',
+							resolvedFrom: "exports['.'].require",
+						},
+						runtime: {
+							filename: 'runtime.cjs',
+							resolvedFrom: "exports['.'].require",
+						},
+					})
+				})
+			})
+		})
+
+		describe('with ESM', () => {
+			// See: https://rolldown.rs/reference/config-options#format
+			const format = 'esm' as const
+
+			const esmOpts = {
+				...baseOpts,
+				output: {
+					format,
+					entryFileNames: '[name].mjs',
+				},
+			} satisfies RooldownOptions
+
+			describe('with platform="node"', () => {
+				const platform = 'node' as const
+
+				it('by default, ESM loads runtime from node.import, rest from import', async () => {
+					const rolldown = await import('rolldown')
+
+					await rolldown.build({
+						...esmOpts,
+						platform,
+						output: {
+							...esmOpts.output,
+							dir: `${cwd}/dist/rolldown-${platform}/esm`,
+						},
+					})
+
+					const rolldownNodeEsm = await $`${jsRuntime} ${cwd}/dist/rolldown-${platform}/esm/index.mjs`.json()
+					expect(rolldownNodeEsm).toEqual({
+						client: {
+							filename: 'client.mjs',
+							resolvedFrom: "exports['.'].import",
+						},
+						index: {
+							filename: 'index.mjs',
+							resolvedFrom: "exports['.'].import",
+						},
+						runtime: {
+							filename: 'runtime-node.mjs',
+							resolvedFrom: "exports['.'].node.import",
+						},
+					})
+				})
+			})
+
+			describe('with platform="neutral"', () => {
+				const platform = 'neutral' as const
+
+				it('by default, ESM loads all from import', async () => {
+					const rolldown = await import('rolldown')
+
+					await rolldown.build({
+						...esmOpts,
+						platform,
+						output: {
+							...esmOpts.output,
+							dir: `${cwd}/dist/rolldown-${platform}/esm`,
+						},
+					})
+
+					const rolldownNodeEsm = await $`${jsRuntime} ${cwd}/dist/rolldown-${platform}/esm/index.mjs`.json()
+					expect(rolldownNodeEsm).toEqual({
+						client: {
+							filename: 'client.mjs',
+							resolvedFrom: "exports['.'].import",
+						},
+						index: {
+							filename: 'index.mjs',
+							resolvedFrom: "exports['.'].import",
+						},
+						runtime: {
+							filename: 'runtime.mjs',
+							resolvedFrom: "exports['.'].import",
+						},
+					})
+				})
+			})
+		})
+	})
+
+	describe('esbuild', () => {
 		const baseOpts = {
 			bundle: true,
 			sourcemap: true,
